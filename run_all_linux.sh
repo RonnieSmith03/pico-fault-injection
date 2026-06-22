@@ -13,7 +13,8 @@
 
 PICOTOOL="picotool"            # native picotool on PATH; change if yours is elsewhere
 SERIAL="/dev/ttyACM0"          # change if your board enumerates as ttyACM1, etc.
-DIR="$HOME/testbench"
+# resolve this script's own directory, so it works no matter where it's cloned
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="$DIR/build"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG="$DIR/testbench_report_${TIMESTAMP}.txt"

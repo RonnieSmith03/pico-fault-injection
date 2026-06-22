@@ -1,9 +1,12 @@
 #!/bin/bash
-# run_all.sh -- ONE command. For each unmodified program: flash GOLDEN, capture;
-# flash FAULTY (live-r6 register SEU), capture. Write one report, exit.
+# run_all.sh -- ONE command (Windows + WSL2). For each unmodified program: flash
+# GOLDEN, capture; flash FAULTY (live-r6 register SEU), capture. Write one
+# report, exit. Uses usbipd + the Windows picotool to bridge the board into WSL.
+
 PT="/mnt/c/Users/Owner/.pico-sdk/picotool/2.2.0-a4/picotool/picotool.exe"
 BUSID="1-1"
-DIR="$HOME/testbench"
+# resolve this script's own directory, so it works no matter where it's cloned
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="$DIR/build"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG="$DIR/testbench_report_${TIMESTAMP}.txt"
@@ -33,7 +36,7 @@ echo " while the CPU executes inside the target program, via timer interrupt."
 echo "=========================================="
 } > "$LOG"
 
-cd "$BUILD_DIR" || { echo "build dir missing"; exit 1; }
+cd "$BUILD_DIR" || { echo "build dir missing -- run: mkdir -p build && cd build && cmake .. && make -j4"; exit 1; }
 cmake -DSEU_BIT=$BIT .. >/dev/null 2>&1
 make -j4 >/dev/null 2>&1
 
