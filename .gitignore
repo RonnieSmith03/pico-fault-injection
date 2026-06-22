@@ -1,0 +1,22 @@
+# Build output
+build/
+*.uf2
+*.elf
+*.bin
+*.hex
+*.dis
+*.map
+
+# Debug / iteration scratch (not part of the deliverable)
+run_sweep.sh
+*_report_*.txt
+!evidence/*_report_*.txt
+.golden_*.txt
+.faulty_*.txt
+*.save
+
+# Editor / OS
+*.swp
+*~
+.DS_Store
+.vscode/

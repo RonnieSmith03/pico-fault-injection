@@ -1,0 +1,212 @@
+==========================================
+ TESTBENCH -- external register SEU on UNMODIFIED programs
+ Sun Jun 21 16:05:36 EDT 2026
+ Fault: XOR bit 4 into the live r6 register (array-base pointer)
+ while the CPU executes inside the target program, via timer interrupt.
+==========================================
+
+##########################################
+# PROGRAM: quicksort
+##########################################
+
+===== GOLDEN =====
+
+
+Starting QuickSort Benchmark...
+
+Original array: 10 7 8 4 9 1 5 3 12 
+
+Sorted array: 1 3 4 5 7 8 9 10 12 
+
+QuickSort Benchmark Complete.
+
+
+
+Starting QuickSort Benchmark...
+
+Original array: 10 7 8 4 9 1 5 3 12 
+
+Sorted array: 1 3 4 5 7 8 9 10 12 
+
+QuickSort Benchmark Complete.
+
+
+
+Starting QuickSort Benchmark...
+
+Original array: 10 7 8 4 9 1 5 3 12 
+
+Sorted array: 1 3 4 5 7 8 9 10 12 
+
+QuickSort Benchmark Complete.
+
+
+
+Starting QuickSort Benchmark...
+
+Original array: 10 7 8 4 9 1 5 3 12 
+
+Sorted array: 1 3 4 5 7 8 9 10 12 
+
+QuickSort Benchmark Complete.
+
+
+
+Starting QuickSort Benchmark...
+
+Original array: 10 7 8 4 9 1 5 3 12 
+
+Sorted array: 1 3 4 5 7 8 9 10 12 
+
+QuickSort Benchmark Complete.
+
+
+===== FAULTY (r6 bit4) =====
+GATE fires=5 inrange=1 injected=1 lastPC=0x10000820 win=0x1000081c-0x10000952
+
+
+
+Starting QuickSort Benchmark...
+
+Original array: 10 7 8 4 9 
+
+Sorted array: 3 4 5 7 8 
+
+QuickSort Benchmark Complete.
+
+GATE fires=5 inrange=1 injected=1 lastPC=0x10000820 win=0x1000081c-0x10000952
+
+GATE fires=5 inrange=1 injected=1 lastPC=0x10000820 win=0x1000081c-0x10000952
+
+
+
+TESTBENCH_DONE quicksort
+
+
+
+Starting QuickSort Benchmark...
+
+Original array: 10 7 8 4 9 
+
+Sorted array: 3 4 5 7 8 
+
+QuickSort Benchmark Complete.
+
+
+
+Starting QuickSort Benchmark...
+
+Original array: 10 7 8 4 9 
+
+Sorted array: 3 4 5 7 8 
+
+QuickSort Benchmark Complete.
+
+
+
+Starting QuickSort Benchmark...
+
+Original array: 10 7 8 4 9 
+
+Sorted array: 3 4 5 7 8 
+
+QuickSort Benchmark Complete.
+
+
+
+Starting QuickSort Benchmark...
+
+Original array: 10 7 8 4 9 
+
+Sorted array: 3 4 5 7 8 
+
+QuickSort Benchmark Complete.
+
+
+##########################################
+# PROGRAM: matrix
+##########################################
+
+===== GOLDEN =====
+Starting Matrix Multiplication Benchmark...
+
+Matrix Multiplication Result:
+
+3 3 3 
+
+6 6 6 
+
+Matrix Multiplication Benchmark Complete.
+
+
+===== FAULTY (r6 bit4) =====
+GATE fires=1800086 inrange=0 injected=0 lastPC=0x1000129e win=0x1000031c-0x10000452
+
+Starting Matrix Multiplication Benchmark...
+
+Matrix Multiplication Result:
+
+3 19 3 
+
+6 38 6 
+
+Matrix Multiplication Benchmark Complete.
+
+GATE fires=1999983 inrange=1 injected=1 lastPC=0x1000031c win=0x1000031c-0x10000452
+
+SEU_INJECTED r6 bit=4 at PC=0x1000031c
+
+GATE fires=1999983 inrange=1 injected=1 lastPC=0x1000031c win=0x1000031c-0x10000452
+
+
+
+TESTBENCH_DONE matrix_mult
+
+
+##########################################
+# PROGRAM: euler
+##########################################
+
+===== GOLDEN =====
+Starting Euler Benchmark...
+
+x		y
+
+0.025000	1.025000
+
+0.050000	1.051250
+
+0.075000	1.078781
+
+0.100000	1.107626
+
+Euler Benchmark Complete.
+
+
+===== FAULTY (r6 bit4) =====
+GATE fires=1800082 inrange=0 injected=0 lastPC=0x10001254 win=0x1000031c-0x10000452
+
+Starting Euler Benchmark...
+
+x		y
+
+0.025000	1.025000
+
+0.050000	1.051250
+
+0.075000	1.078781
+
+0.100000	1.107626
+
+Euler Benchmark Complete.
+
+GATE fires=1999986 inrange=1 injected=1 lastPC=0x1000031e win=0x1000031c-0x10000452
+
+SEU_INJECTED r6 bit=4 at PC=0x1000031e
+
+GATE fires=1999986 inrange=1 injected=1 lastPC=0x1000031e win=0x1000031c-0x10000452
+
+
+
+TESTBENCH_DONE euler
+
