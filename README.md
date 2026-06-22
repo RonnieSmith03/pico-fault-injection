@@ -66,8 +66,12 @@ the way of the timing of the injection.
   other core.
 - `CMakeLists.txt` — builds a golden version and a faulty version of each
   program, six firmware files total.
-- `run_all.sh` — the script that does everything in one command: build, flash,
-  capture the output, write the report, and exit.
+- `run_all.sh` — the one-command runner for **Windows + WSL2**: build, flash,
+  capture the output, write the report, and exit. Uses usbipd and the Windows
+  picotool to bridge the board into WSL.
+- `run_all_linux.sh` — the one-command runner for **native Linux**: same thing,
+  but it talks to the Pico directly with the native picotool (no usbipd, no
+  Zadig).
 - `pico_sdk_import.cmake` — the standard file the Pico SDK needs to set up the
   build.
 
@@ -87,6 +91,12 @@ picotool, called from inside WSL. Flashing reboots the board, and that breaks
 the USB connection WSL was using, so flashing from the Windows side is what
 has this working reliably for me.
 
+If you are on native Linux (not WSL), you have an easier time than I did. All of
+the Windows and WSL specific steps below (usbipd, Zadig, the Windows picotool
+path) exist only to bridge the Pico's USB into WSL, and you do not need any of
+them. The Pico is just plugged into a USB port directly. See the
+"Native Linux notes" section below for what changes.
+
 ## Setting up Windows and WSL (one time)
 
 This was a technical hurdle that needed to be addressed before implementing
@@ -98,6 +108,18 @@ installed through Zadig.
 1. Install the Pico SDK and the toolchain. I used the VS Code Pico extension
    for this, which installed the SDK (2.2.0), the arm-none-eabi-gcc toolchain
    (14_2_Rel1), and picotool (2.2.0-a4) under `~/.pico-sdk/`.
+
+   To confirm the compiler is installed and on your PATH (run in WSL):
+   ```bash
+   arm-none-eabi-gcc --version
+   ```
+
+   To find exactly where the Windows picotool landed (so you can fill in its
+   path later), run this in WSL -- it searches the Windows side for picotool.exe:
+   ```bash
+   ls /mnt/c/Users/*/.pico-sdk/picotool/*/picotool/picotool.exe
+   ```
+   Copy the path it prints; that is the value you put in `run_all.sh` in step 5.
 
 2. Install usbipd-win. In an admin PowerShell window:
    ```powershell
@@ -115,13 +137,26 @@ installed through Zadig.
    This is what lets usbipd actually grab the device and forward it into WSL.
    Without this step the autoflash never worked for me.
 
-4. Find the bus ID for the Pico. In PowerShell:
+4. Find the bus ID for the Pico and bind it. In an admin PowerShell window:
    ```powershell
    usbipd list
    ```
-   Mine showed up as **`1-1`**. **Check your own output and use whatever
-   BUSID shows up for you** if it's different, by changing the `BUSID`
-   variable at the top of `run_all.sh`.
+   Look for the Pico in the list and note its BUSID (the left-hand column, like
+   `1-1`). Mine showed up as **`1-1`**. **Use whatever BUSID shows up for you**
+   if it's different, by changing the `BUSID` variable at the top of
+   `run_all.sh`.
+
+   The first time only, bind that BUSID so usbipd is allowed to share it
+   (replace `1-1` with yours):
+   ```powershell
+   usbipd bind --busid 1-1
+   ```
+   After that, `run_all.sh` handles the per-flash attach/detach automatically.
+   To attach it to WSL by hand (the script does this for you, but if you want to
+   test it):
+   ```powershell
+   usbipd attach --wsl --busid 1-1
+   ```
 
 5. **Double check the picotool path in `run_all.sh` matches your own Windows
    username.** This will not work until you change `<you>` to your actual
@@ -129,6 +164,13 @@ installed through Zadig.
    ```
    /mnt/c/Users/<you>/.pico-sdk/picotool/2.2.0-a4/picotool/picotool.exe
    ```
+   Confirm your edited path is right by running it from WSL -- it should print a
+   version number, not "No such file or directory":
+   ```bash
+   /mnt/c/Users/<you>/.pico-sdk/picotool/2.2.0-a4/picotool/picotool.exe version
+   ```
+   (If you do not know your Windows username, run `cmd.exe /c echo %USERNAME%`
+   from WSL and it will print it.)
 
 ## Building it
 
@@ -183,6 +225,17 @@ the golden version instead. Hit Ctrl-C to stop watching.
 If the board ever locks up and shows as "Unknown USB Device" when you run
 `usbipd list`, unplug it, hold down BOOTSEL, and plug it back in. That forces
 it into the ROM bootloader no matter what the firmware was doing.
+
+## Which platform are you on?
+
+The build (`cmake .. && make -j4`) is identical everywhere. Only flashing and
+reading the serial port differ:
+
+- **Windows + WSL2:** follow the sections above (usbipd, Zadig, the Windows
+  picotool) and use `run_all.sh`.
+- **Native Linux:** ignore the Windows and WSL steps entirely. Jump to the
+  **"Native Linux — full walkthrough"** section at the very bottom and use
+  `run_all_linux.sh`. It is actually the simpler path.
 
 ## How to check the output is correct
 
@@ -278,5 +331,120 @@ like to acheive  and this one stays as a working  baseline:
 
 Keeping them separate means this directory never gets less stable as I
 experiment, and the progression of the work stays easy to follow.
+
+
+## Native Linux — full walkthrough
+
+If you are on a normal Linux machine (Ubuntu, Fedora, etc.) and NOT using WSL,
+this is your section. You can ignore everything above about usbipd, Zadig, and
+the Windows picotool path -- those only exist to forward the Pico's USB into
+WSL, which you do not need. Your Pico is just plugged into a USB port.
+
+This path is simpler than the Windows one. Here is the whole thing start to
+finish.
+
+### 1. Install the toolchain and SDK
+
+Install CMake, the ARM cross-compiler, and the Pico SDK. On Ubuntu/Debian:
+
+```bash
+sudo apt update
+sudo apt install -y cmake gcc-arm-none-eabi build-essential git
+```
+
+Get the Pico SDK and point the environment at it (adjust the path to wherever
+you cloned it):
+
+```bash
+git clone -b 2.2.0 https://github.com/raspberrypi/pico-sdk.git
+cd pico-sdk && git submodule update --init && cd ..
+export PICO_SDK_PATH=$(pwd)/pico-sdk
+```
+
+(Put that `export` line in your `~/.bashrc` so it persists.)
+
+### 2. Install picotool
+
+Try your package manager first:
+
+```bash
+sudo apt install -y picotool      # recent Ubuntu has this
+picotool version                  # confirm it's installed
+```
+
+If your distro does not package it, build it from source from
+https://github.com/raspberrypi/picotool (its README has the steps; it needs the
+SDK you already set up).
+
+### 3. Install the udev rule (so you don't need sudo)
+
+The SDK ships a rules file. Install it once so picotool and the serial port work
+as a normal user:
+
+```bash
+sudo cp $PICO_SDK_PATH/lib/tinyusb/examples/device/99-tinyusb.rules /etc/udev/rules.d/ 2>/dev/null
+# or the Pico-specific rule if present:
+sudo cp $PICO_SDK_PATH/picotool/udev/99-picotool.rules /etc/udev/rules.d/ 2>/dev/null
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
+Also add yourself to the `dialout` group so you can read the serial port, then
+log out and back in:
+
+```bash
+sudo usermod -aG dialout $USER
+```
+
+If any of this is skipped, you can still run everything with `sudo` instead.
+
+### 4. Build
+
+Exactly the same as every other platform:
+
+```bash
+cd ~/testbench
+mkdir -p build && cd build
+cmake ..
+make -j4
+```
+
+That produces the six firmware files in `build/`.
+
+### 5. Run it, one command
+
+```bash
+cd ~/testbench
+./run_all_linux.sh
+```
+
+This builds (if needed), then for each program flashes the golden and faulty
+builds with the native picotool, reads the serial output directly from
+`/dev/ttyACM0`, writes `testbench_report_<timestamp>.txt`, prints it, and exits.
+There is no detach/attach step because the board is on a real USB port.
+
+If your board comes up as a different serial device (for example
+`/dev/ttyACM1`), edit the `SERIAL` variable at the top of `run_all_linux.sh`.
+If `picotool` is not on your PATH, edit the `PICOTOOL` variable to its full path.
+
+### 6. Run it by hand (native Linux)
+
+To flash one build and watch it live:
+
+```bash
+# put the running board into BOOTSEL and load a build
+picotool reboot -f -u
+picotool load -x build/inject_quicksort_FAULTY.uf2
+
+# watch the serial output
+stdbuf -oL cat /dev/ttyACM0
+```
+
+Swap in any of the six firmware names. Ctrl-C to stop watching. If the board
+ever wedges, unplug it, hold BOOTSEL, and plug it back in to force the ROM
+bootloader -- same as on any platform.
+
+The verification (what golden vs faulty output should look like) and the tuning
+options are the same as described in the sections above; only the flashing and
+serial mechanics change between platforms.
 
 
